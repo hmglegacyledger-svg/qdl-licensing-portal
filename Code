@@ -1,0 +1,164 @@
+URTI FORESTRY — COMPLETE PLATFORM SOURCE CODE
+Part 1 of 9: Architecture Overview + Configuration Files
+
+
+Live URL: https://urti-forestry.polsia.app
+Repository: https://github.com/Polsia-Inc/urti-forestry
+
+=============================================
+ARCHITECTURE OVERVIEW
+=============================================
+
+STACK:
+  Runtime: Node.js 18+
+  Framework: Express.js 4.x
+  Database: PostgreSQL (Neon)
+
+  Deployment: Render (single web service)
+  Structure: Monolithic (server.js + public/ + migrations/)
+
+HOW TO DEPLOY INDEPENDENTLY:
+  1. Clone the repo
+  2. Set environment variables (see list below)
+  3. npm install
+  4. npm run build  (installs deps + runs migrations + generates assets)
+  5. npm start      (starts Express on PORT)
+
+ENVIRONMENT VARIABLES:
+  DATABASE_URL          — PostgreSQL connection string (REQUIRED)
+
+  PORT                  — Server port (default: 3000)
+  NODE_ENV              — "production" or "development"
+  OPENAI_API_KEY        — OpenAI-compatible key for AI vision features
+
+  OPENAI_BASE_URL       — OpenAI-compatible proxy URL
+  POLSIA_API_KEY        — Polsia platform API key
+  POLSIA_ANALYTICS_SLUG — Analytics injection slug
+  CD_COOKIE_SECRET      — Credit-directory auth cookie secret
+  ORIGIN_COOKIE_SECRET  — Origin page auth cookie secret
+  FR_COOKIE_SECRET      — Future-research auth cookie secret
+  ADMIN_API_KEY         — Admin API endpoints auth key
+  HOLOGRAPHIC_API_KEY   — Holographic scanner endpoints key
+
+
+ROUTE → FILE MAPPING:
+  GET /                         → public/index.html
+  GET /pipeline-live            → public/pipeline-live.html
+  GET /holographic-pipeline     → operations-holographic-pipeline.html
+
+  GET /digital-fort-knox        → public/digital-fort-knox.html
+  GET /vault/diamond/open       → public/vault-diamond.html
+  GET /qdi                      → public/qdi.html
+  GET /qrte                     → public/qrte.html (pw: GHOSTCOIN2026)
+  GET /verify                   → public/verify.html
+  GET /demo                     → public/demo.html
+  GET /api/*                    → Handled in server.js API routes
+  GET /health                   → Health check
+
+DEPENDENCIES:
+  express             — HTTP server framework
+  pg                  — PostgreSQL client
+  openai              — OpenAI API client
+  qrcode              — QR code generation
+  @noble/post-quantum — Post-quantum cryptography (ML-DSA-65 signatures)
+
+DATABASE (51 migrations):
+
+  Key tables: users, nfcc_certificates, orders, pipeline_live_runs,
+  holographic_scans, digital_fort_knox_items, quantum_layer_1..10,
+  stablecoin_distribution, lending tables, supply_chain, mesh_network,
+  music_nfccs, artist_portal, sovereign_buyer, sovereign_shards,
+  ugkos_command_layer, aob_engine, health_scorecards, gravity_wells,
+  qe_twins, public_verifications, and many more.
+
+FILE STRUCTURE:
+  server.js           — Main Express app (21,034 lines, 883KB)
+  migrate.js          — Database migration runner
+  package.json        — Dependencies and scripts
+  render.yaml         — Render deployment config
+  public/             — 77 HTML pages + shared JS/CSS assets
+  migrations/         — 51 database migration files
+  scripts/            — Utility scripts (API key gen, asset gen, etc.)
+  docs/               — VAULT_ARCHITECTURE_SPEC.md
+
+=============================================
+FILE: package.json
+=============================================
+
+{
+  "name": "express-postgres-starter",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "npm install && node migrate.js && node scripts/generate-og-image.js && node scripts/generate-api-key.js",
+    "migrate": "node migrate.js",
+    "seed:api-key": "node scripts/generate-api-key.js",
+    "seed:api-key:force": "node scripts/generate-api-key.js --force"
+  },
+  "dependencies": {
+    "@noble/post-quantum": "^0.2.1",
+    "express": "^4.18.2",
+    "openai": "^4.77.0",
+    "pg": "^8.11.3",
+    "qrcode": "^1.5.4"
+  }
+}
+
+
+=============================================
+FILE: render.yaml
+=============================================
+
+services:
+  - type: web
+    runtime: node
+    name: app
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+
+=============================================
+FILE: README.md
+=============================================
+
+# Express Postgres Starter
+
+A minimal Express.js template with PostgreSQL connection, designed for Polsia infrastructure provisioning.
+
+## Requirements
+
+- Node.js 18+
+- PostgreSQL database (Neon recommended)
+
+## Environment Variables
+
+- `DATABASE_URL` - PostgreSQL connection string (required)
+- `PORT` - Server port (default: 3000)
+
+## Endpoints
+
+- `GET /` - Hello message
+- `GET /health` - Health check (verifies database connection)
+
+## Local Development
+
+```bash
+npm install
+DATABASE_URL="postgresql://..." npm run dev
+```
+
+## Deployment
+
+This template is configured for Render deployment via `render.yaml`.
+
+
+=============================================
+FILE: migrate.js
+=============================================
+
